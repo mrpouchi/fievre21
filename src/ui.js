@@ -13,7 +13,7 @@ const Store = {
 };
 const prog = Object.assign({ maxAnte: 0, wins: 0, stakeMax: 0, bestHand: 0, seen: {}, runs: 0 }, Store.get('prog', {}));
 const saveProg = () => Store.set('prog', prog);
-const opts = Object.assign({ speed: 1, sound: true, fps: false }, Store.get('opts', {}));
+const opts = Object.assign({ speed: 1, sound: true, music: true, fps: false }, Store.get('opts', {}));
 const saveOpts = () => Store.set('opts', opts);
 
 /* ---------- Formatage ---------- */
@@ -181,6 +181,38 @@ function cardDesc(c) {
   return p.join('<br>');
 }
 
+/* ---------- Musique ----------
+   Morceaux lus depuis music/<nom>.mp3 à côté du jeu (dossier local, hors git) : main, shop, arcana, celestial, boss.
+   Un morceau absent = silence. Fondu enchaîné entre écrans ; si le navigateur bloque la lecture, on réessaie au prochain clic. */
+const Music = {
+  els: {}, cur: null, want: 'main', vol: .35,
+  el(n) {
+    if (!this.els[n]) { const a = new Audio(`music/${n}.mp3`); a.loop = true; a.preload = 'none'; a.volume = 0; a.onerror = () => { a.dead = true; }; this.els[n] = a; }
+    return this.els[n];
+  },
+  play(n) {
+    this.want = n;
+    if (!opts.music) { this.stopAll(); return; }
+    if (this.cur === n) return;
+    const old = this.cur ? this.els[this.cur] : null; this.cur = n;
+    if (old) this.fade(old, 0, () => old.pause());
+    const a = this.el(n); if (a.dead) return;
+    const p = a.play(); if (p && p.catch) p.catch(() => { if (this.cur === n) this.cur = null; });
+    this.fade(a, this.vol);
+  },
+  fade(a, to, done) {
+    clearInterval(a._f); const step = (to - a.volume) / 20;
+    a._f = setInterval(() => {
+      const v = a.volume + step;
+      if (step === 0 || (step > 0 && v >= to) || (step < 0 && v <= to)) { a.volume = to; clearInterval(a._f); if (done) done(); }
+      else a.volume = Math.max(0, Math.min(1, v));
+    }, 40);
+  },
+  stopAll() { Object.values(this.els).forEach(a => { clearInterval(a._f); a.pause(); a.volume = 0; }); this.cur = null; },
+  forScreen(id) { this.play(id === 'shop' ? 'shop' : id === 'game' && ui.run && ui.run.blind && ui.run.blind.boss ? 'boss' : 'main'); },
+};
+document.addEventListener('pointerdown', () => { if (opts.music && Music.want && !Music.cur) Music.play(Music.want); }, true);
+
 /* ---------- Son ---------- */
 const Snd = {
   ctx: null,
@@ -288,7 +320,8 @@ const BG = {
 const ui = { run: null, busy: false, dealerShown: null, dealerRevealed: false, dealLimit: null, scoringHand: -1, fast: false, revealFd: false, setup: { deck: 0, stake: 0 } };
 const sleep = ms => new Promise(r => setTimeout(r, (ui.fast ? Math.min(ms, 40) : ms) / opts.speed));
 function applySpeed() { document.documentElement.style.setProperty('--sp', String(opts.speed)); }
-function show(id) { Tip.hide(); document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function show(id) { Tip.hide(); document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); Music.forScreen(id); }
+const curScreen = () => { const s = document.querySelector('.screen.on'); return s ? s.id : 'title'; };
 function discover(id) { if (id && !prog.seen[id]) { prog.seen[id] = 1; saveProg(); } }
 function persist() {
   const run = ui.run; if (!run) return;
@@ -988,13 +1021,14 @@ function choiceDesc(ch) {
 function openPackUI(onClose) {
   const run = ui.run, pk = run.pack; if (!pk) { if (onClose) onClose(); return; }
   BG.set('pack'); Snd.pack();
+  if (pk.type === 'arcane' || pk.type === 'spectre') Music.play('arcana'); else if (pk.type === 'etoile') Music.play('celestial');
   const wrap = $('#packWrap');
   wrap.classList.add('on');
   let sel = -1;
   const picked = new Set();
   const render = (first) => {
     const p = run.pack;
-    if (!p) { wrap.classList.remove('on'); BG.set($('#shop').classList.contains('on') ? 'shop' : 'normal'); if (onClose) onClose(); return; }
+    if (!p) { wrap.classList.remove('on'); BG.set($('#shop').classList.contains('on') ? 'shop' : 'normal'); Music.forScreen(curScreen()); if (onClose) onClose(); return; }
     const ch = sel >= 0 ? p.choices[sel] : null;
     const tir = p.tirage && (!ch || (ch.cons && needsTirage(ch.cons)));
     const need = ch && ch.cons ? F.consNeeds(ch.cons) : 0;
@@ -1283,18 +1317,21 @@ const FPS = {
 };
 function fpsLabel() { return opts.fps ? 'Compteur FPS : affiché' : 'Compteur FPS : masqué'; }
 function soundLabel() { return opts.sound ? 'Son : activé' : 'Son : coupé'; }
+function musicLabel() { return opts.music ? 'Musique : activée' : 'Musique : coupée'; }
 function openOptions(inRun) {
   Snd.click();
   modal(`<h2>Options</h2>
     <div style="display:grid;gap:8px;text-align:left"><b>Vitesse des animations</b>
       <div class="btnrow">${[1, 2, 3, 4].map(v => `<button class="btn ${opts.speed === v ? 'b-purple' : 'b-grey'} mini" data-sp="${v}">×${v}</button>`).join('')}</div></div>
     <button class="btn b-grey" id="oSound">${soundLabel()}</button>
+    <button class="btn b-grey" id="oMusic">${musicLabel()}</button>
     <button class="btn b-grey" id="oFps">${fpsLabel()}</button>
     ${inRun ? '<button class="btn b-purple" id="oHow">Comment jouer</button><button class="btn b-red" id="oQuit">Abandonner la partie</button><button class="btn b-grey" id="oTitle">Sauvegarder et quitter</button>' : ''}
     <button class="btn b-gold" id="mClose">Fermer</button>`,
     m => {
       m.querySelectorAll('[data-sp]').forEach(b => { b.onclick = () => { opts.speed = +b.dataset.sp; saveOpts(); applySpeed(); openOptions(inRun); }; });
       m.querySelector('#oSound').onclick = () => { opts.sound = !opts.sound; saveOpts(); Snd.init(); Snd.click(); openOptions(inRun); };
+      m.querySelector('#oMusic').onclick = () => { opts.music = !opts.music; saveOpts(); Snd.click(); if (opts.music) { Music.cur = null; Music.forScreen(curScreen()); } else Music.stopAll(); openOptions(inRun); };
       m.querySelector('#oFps').onclick = () => { opts.fps = !opts.fps; saveOpts(); FPS.show(opts.fps); Snd.click(); openOptions(inRun); };
       m.querySelector('#mClose').onclick = closeModal;
       if (inRun) {

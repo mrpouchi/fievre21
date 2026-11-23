@@ -210,7 +210,7 @@ const BG = {
 const ui = { run: null, busy: false, dealerShown: null, dealerRevealed: false, dealLimit: null, scoringHand: -1, fast: false, revealFd: false, setup: { deck: 0, stake: 0 } };
 const sleep = ms => new Promise(r => setTimeout(r, (ui.fast ? Math.min(ms, 40) : ms) / opts.speed));
 function applySpeed() { document.documentElement.style.setProperty('--sp', String(opts.speed)); }
-function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function show(id) { Tip.hide(); document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
 function discover(id) { if (id && !prog.seen[id]) { prog.seen[id] = 1; saveProg(); } }
 function persist() {
   const run = ui.run; if (!run) return;
@@ -295,7 +295,7 @@ function renderSlots(container, o) {
   let h = '';
   for (let i = 0; i < n; i++) { const inst = run.charms[i]; h += inst ? slotHTML(inst, i, { prices: o && o.prices, hide }) : '<div class="slot" aria-hidden="true"></div>'; }
   container.innerHTML = h;
-  container.querySelectorAll('.slot.full').forEach(b => b.addEventListener('click', () => { if (!ui.busy) openCharmSheet(+b.dataset.i); }));
+  container.querySelectorAll('.slot.full').forEach(b => { b.addEventListener('click', () => { if (!ui.busy) openCharmSheet(+b.dataset.i); }); bindTip(b, () => charmTipHTML(+b.dataset.i)); });
 }
 function renderCons(container) {
   const run = ui.run, n = F.consSlots(run);
@@ -305,7 +305,7 @@ function renderCons(container) {
     h += c ? `<button class="cslot full tilt k-${c.kind}" data-i="${i}" aria-label="${esc(F.consName(c))}">${consIcon(c)}</button>` : '<div class="cslot"></div>';
   }
   container.innerHTML = h;
-  container.querySelectorAll('.cslot.full').forEach(b => b.addEventListener('click', () => { if (!ui.busy) openConsSheet(+b.dataset.i); }));
+  container.querySelectorAll('.cslot.full').forEach(b => { b.addEventListener('click', () => { if (!ui.busy) openConsSheet(+b.dataset.i); }); bindTip(b, () => consTipHTML(+b.dataset.i)); });
 }
 
 /* ---------- Rendu du jeu ---------- */
@@ -767,8 +767,46 @@ function startTableUI() {
   setTimeout(() => { if (run.phase === 'ready' && !ui.busy) dealFlow(); }, 450 / opts.speed);
 }
 
+/* ---------- Infobulles au survol (souris uniquement ; au doigt, on garde les feuilles) ---------- */
+const hoverMQ = matchMedia('(hover: hover) and (pointer: fine)');
+const Tip = {
+  el: null, cur: null,
+  show(target, html) {
+    if (!this.el) { this.el = document.createElement('div'); this.el.id = 'tip'; this.el.setAttribute('role', 'tooltip'); document.body.appendChild(this.el); }
+    this.cur = target;
+    this.el.style.setProperty('--tc', getComputedStyle(target).getPropertyValue('--rc').trim() || 'var(--edge)');
+    this.el.innerHTML = html;
+    const r = target.getBoundingClientRect(), t = this.el.getBoundingClientRect(), m = 8;
+    let top = r.top - t.height - 10;
+    if (top < m) top = Math.min(r.bottom + 10, innerHeight - t.height - m);
+    const left = Math.max(m, Math.min(r.left + r.width / 2 - t.width / 2, innerWidth - t.width - m));
+    this.el.style.translate = `${Math.round(left)}px ${Math.round(Math.max(m, top))}px`;
+    this.el.classList.add('on');
+  },
+  hide(target) { if (this.el && (!target || target === this.cur)) { this.el.classList.remove('on'); this.cur = null; } },
+};
+function bindTip(el, html) {
+  el.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' && hoverMQ.matches && !ui.busy) Tip.show(el, html()); });
+  el.addEventListener('pointerleave', () => Tip.hide(el));
+  el.addEventListener('pointerdown', () => Tip.hide());
+}
+function consHead(c) {
+  const d = F.consDef(c);
+  return `<div class="sh-head"><div class="sh-icon k-${c.kind}" style="color:${c.kind === 'etoile' ? 'var(--gold)' : c.kind === 'spectre' ? 'var(--cyan)' : '#d6a8ff'}">${consIcon(c)}</div><div><div class="sh-name">${esc(d.name)}</div><div class="sh-rar">${KIND_NAME[c.kind]}</div></div></div>`;
+}
+function charmTipHTML(i) {
+  const run = ui.run, inst = run.charms[i]; if (!inst) return '';
+  if (F.bossActive(run, 'bonneteau') && ['ready', 'player', 'bustChoice'].includes(run.phase)) return '<div class="sh-name">Porte-bonheur retourné</div><div class="sh-desc">Le Bonneteau cache tes porte-bonheur.</div>';
+  return `${charmHead(inst, 'emplacement ' + (i + 1))}<div class="sh-desc">${esc(F.charmDesc(run, inst))}</div>${charmExtra(inst)}<div class="tip-foot"><span class="tip-hint">Revente $${F.sellValue(run, inst)}</span><span class="tip-hint">Clique pour vendre ou déplacer</span></div>`;
+}
+function consTipHTML(i) {
+  const run = ui.run, c = run.consumables[i]; if (!c) return '';
+  const d = F.consDef(c);
+  return `${consHead(c)}<div class="sh-desc">${esc(d.desc)}</div>${c.kind === 'etoile' ? `<div class="sh-extra">${levelLine(run, d.type)}</div>` : ''}<div class="tip-foot"><span class="tip-hint">Revente $${F.sellValue(run, c)}</span><span class="tip-hint">Clique pour utiliser</span></div>`;
+}
+
 /* ---------- Feuilles de détail ---------- */
-function sheet(html, setup) { $('#sheet').innerHTML = html; $('#sheetWrap').classList.add('on'); if (setup) setup($('#sheet')); }
+function sheet(html, setup) { Tip.hide(); $('#sheet').innerHTML = html; $('#sheetWrap').classList.add('on'); if (setup) setup($('#sheet')); }
 function closeSheet() { $('#sheetWrap').classList.remove('on'); }
 $('#sheetWrap').addEventListener('click', e => { if (e.target.id === 'sheetWrap') closeSheet(); });
 function charmHead(inst, sub) {
@@ -819,7 +857,7 @@ function openConsSheet(i) {
   const run = ui.run, c = run.consumables[i]; if (!c) return;
   const d = F.consDef(c);
   Snd.click();
-  sheet(`<div class="sh-head"><div class="sh-icon k-${c.kind}" style="color:${c.kind === 'etoile' ? 'var(--gold)' : c.kind === 'spectre' ? 'var(--cyan)' : '#d6a8ff'}">${consIcon(c)}</div><div><div class="sh-name">${esc(d.name)}</div><div class="sh-rar">${KIND_NAME[c.kind]}</div></div></div>
+  sheet(`${consHead(c)}
     <div class="sh-desc">${esc(d.desc)}</div>
     ${c.kind === 'etoile' ? `<div class="sh-extra">${levelLine(run, d.type)}</div>` : ''}
     ${consCanUseNow() ? '' : '<div class="sh-note">Utilisable entre deux mains, en boutique ou avant une table.</div>'}
@@ -1004,6 +1042,7 @@ function itemHTML(it, i) {
   return `<button class="item tilt k-${it.kind}" data-k="item" data-i="${i}" style="--i:${i}">${consIcon(it.cons)}<span class="iname">${esc(F.consName(it.cons))}</span>${price}</button>`;
 }
 function renderShop() {
+  Tip.hide();
   const run = ui.run, s = run.shop;
   const items = s.items.map(itemHTML).join('');
   const packs = s.packs.map((pk, i) => {
@@ -1034,15 +1073,14 @@ function renderShop() {
   renderSlots($('#shopSlots'), { prices: true });
   renderCons($('#shopCons'));
   const root = $('#shop');
-  root.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => openShopItem(b.dataset.k, +b.dataset.i)));
+  root.querySelectorAll('[data-k]').forEach(b => { b.addEventListener('click', () => openShopItem(b.dataset.k, +b.dataset.i)); bindTip(b, () => shopTipHTML(b.dataset.k, +b.dataset.i)); });
   $('#sBurn').onclick = () => pickCard('Brûler une carte', `Retire définitivement une carte de ton paquet ($${run.burnCost}).`, id => { if (F.shopBuy(run, 'burn', 0, id)) { Snd.glass(); afterChange(); } });
   $('#sRoll').onclick = () => { if (F.shopBuy(run, 'reroll')) { Snd.deal(); Snd.coin(); afterChange(); } };
   $('#sDeck').onclick = () => openDeck('deck');
   $('#sNext').onclick = () => { Snd.click(); F.leaveShop(run); showSelect(); };
 }
-function openShopItem(kind, i) {
+function shopItemInfo(kind, i) {
   const run = ui.run, s = run.shop;
-  Snd.click();
   let head = '', desc = '', price = 0, note = '', buyLabel = 'Acheter', canUse = false, extra = '';
   if (kind === 'item') {
     const it = s.items[i]; price = F.itemPrice(run, it);
@@ -1071,6 +1109,16 @@ function openShopItem(kind, i) {
   }
   const afford = F.canAfford(run, price);
   if (!afford) note = `Il te manque $${price - run.money}.`;
+  return { head, desc, price, note, buyLabel, canUse, extra, afford };
+}
+function shopTipHTML(kind, i) {
+  const { head, desc, price, note, extra } = shopItemInfo(kind, i);
+  return `${head}<div class="sh-desc">${esc(desc)}</div>${extra}<div class="tip-foot"><span class="tip-price">${price ? '$' + price : 'Gratuit'}</span><span class="tip-hint">Clique pour acheter</span></div>${note ? `<div class="sh-note">${esc(note)}</div>` : ''}`;
+}
+function openShopItem(kind, i) {
+  const run = ui.run, s = run.shop;
+  Snd.click();
+  const { head, desc, price, note, buyLabel, canUse, extra, afford } = shopItemInfo(kind, i);
   sheet(`${head}<div class="sh-desc">${esc(desc)}</div>${extra}${note ? `<div class="sh-note">${esc(note)}</div>` : ''}
     <div class="btnrow"><button class="btn b-grey" id="shClose">Fermer</button>
     ${canUse ? `<button class="btn b-cyan" id="shUse" ${afford ? '' : 'disabled'}>Utiliser $${price}</button>` : ''}

@@ -411,6 +411,21 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .shopfoot { position: sticky; bottom: 0; padding-top: 14px; background: linear-gradient(transparent, rgba(2,16,10,.92) 40%); }
 .shopfoot .btn { width: 100%; min-height: 56px; font-size: 20px; }
 
+/* ---------- Survol (souris uniquement, pas sur téléphone) ---------- */
+.slot, .cslot, .choice, .item, .stake, .tirage .card { transition: scale .18s cubic-bezier(.2,.9,.3,1.4), filter .18s; }
+.btn { transition: transform .06s, filter .12s, scale .18s cubic-bezier(.2,.9,.3,1.4); }
+.btn::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 35%, rgba(255,255,255,.35) 50%, transparent 65%); transform: translateX(-120%); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover:not(:disabled) { scale: 1.04; filter: brightness(1.15); }
+  .btn:hover:not(:disabled)::after { animation: btnshine .55s ease-out; }
+  .slot.full:hover, .cslot.full:hover, .choice:hover, .item:not(.sold):hover, .tirage .card:hover { scale: 1.1; filter: brightness(1.18) drop-shadow(0 0 6px var(--rc, var(--gold))); z-index: 4; }
+  .ed-negatif:hover { filter: invert(1) hue-rotate(180deg) brightness(1.18); }
+  .stake:not(:disabled):hover { scale: 1.15; }
+  .item:hover .packart { animation: packwiggle .5s ease-in-out; }
+}
+@keyframes btnshine { to { transform: translateX(120%); } }
+@keyframes packwiggle { 25% { rotate: -6deg; } 75% { rotate: 6deg; } }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
   .pop, .bigscore, .toast { animation-duration: .9s !important; }

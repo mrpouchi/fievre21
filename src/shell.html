@@ -431,6 +431,146 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
   .pop, .bigscore, .toast { animation-duration: .9s !important; }
 }
 @media (min-height: 760px) { .cm { font-size: 38px; } #sbMsg { font-size: 18px; } }
+
+/* ---------- Compteur FPS ---------- */
+#fpsMeter { position: fixed; right: calc(6px + env(safe-area-inset-right, 0px)); bottom: calc(6px + env(safe-area-inset-bottom, 0px)); z-index: 96; pointer-events: none;
+  font-family: var(--f-num); font-size: 18px; line-height: 1; padding: 3px 6px; background: rgba(0,0,0,.75); box-shadow: 0 0 0 2px #000; font-variant-numeric: tabular-nums; }
+#fpsMeter.ok { color: var(--green); } #fpsMeter.mid { color: var(--gold); } #fpsMeter.bad { color: var(--mult); }
+
+/* ---------- Mise en page adaptative : tout tient sur un écran, sans défiler ---------- */
+#game > .side, #game > .table { display: flex; flex-direction: column; gap: 5px; min-height: 0; min-width: 0; }
+#game > .table { flex: 1; }
+.shopL, .shopR { display: contents; }
+#shopSlots { height: 54px; }
+#shop { overflow-y: auto; }
+
+/* Écrans bas (petits téléphones, PC 720p/768p) : on resserre */
+@media (max-height: 800px) {
+  .logo { font-size: clamp(48px, 13vh, 80px); }
+  .title-cards { height: 74px; } .title-cards .card { --cw: 46px; }
+  #title { gap: 10px; padding-block: 10px; }
+  .menu { gap: 7px; } .menu .btn { min-height: 44px; } .menu .btn[style] { min-height: 50px !important; }
+  #shop { gap: 6px; padding-block: 6px; }
+  .shophead { padding: 4px 10px; } .shophead .money { font-size: 28px; }
+  .sec { padding: 6px 8px 8px; gap: 6px; }
+  .item { min-height: 96px; padding: 5px 3px 4px; gap: 2px; }
+  .item svg.ico { width: 32px; height: 32px; }
+  .item .packart { width: 38px; height: 52px; }
+  #shopSlots { height: 46px; }
+  .shopfoot { padding-top: 6px; } .shopfoot .btn { min-height: 50px; font-size: 18px; }
+  #select { gap: 6px; padding-block: 6px; }
+  .blind { padding: 7px 10px; }
+}
+
+/* Tablette en portrait : colonne plus large */
+@media (min-width: 600px) and (orientation: portrait) {
+  #app { max-width: 680px; }
+  .btn { font-size: 20px; min-height: 56px; } .mini { min-height: 38px; font-size: 14px; }
+  #charmsRow, #shopSlots { height: 64px; } .slot svg { width: 38px; height: 38px; }
+  .stat span { font-size: 28px; } .stat b { font-size: 11px; }
+  #tName { font-size: 18px; } #tGoal { font-size: 26px; }
+  .item { min-height: 130px; } .item svg.ico { width: 46px; height: 46px; } .item .iname { font-size: 14px; }
+  .item .card { --cw: 54px; }
+}
+
+/* Paysage (PC, tablette couchée, téléphone couché) : deux colonnes */
+@media (orientation: landscape) and (min-width: 640px) {
+  #app { max-width: min(1280px, 100%); padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+  #title > *, #setup > * { width: min(480px, 100%); margin-inline: auto; }
+  #title > .menu { width: min(300px, 100%); }
+
+  /* Jeu : infos à gauche, table à droite */
+  #game { display: none; flex-direction: row; gap: 14px; padding-block: 12px; }
+  #game.on { display: flex; }
+  #game > .side { width: clamp(250px, 28vw, 360px); flex: none; justify-content: flex-start; gap: 8px; }
+  #game > .table { gap: 6px; }
+  #hdr { padding: 8px 12px; }
+  #stats { grid-template-columns: 1fr 1fr; gap: 6px; }
+  #sScore { grid-column: 1 / -1; }
+  .stat { padding: 4px 6px 3px; } .stat span { font-size: 28px; }
+  #charmsRow { height: auto; }
+  #charmsRow .slots { grid-template-columns: repeat(min(var(--n, 5), 3), 1fr); grid-auto-rows: 56px; height: auto; }
+  #consRow { grid-template-columns: 1fr; height: auto; gap: 8px; }
+  #consRow .btn { min-height: 38px; }
+  #consRow .cons { min-height: 38px; }
+  #actions { max-width: 760px; width: 100%; margin-inline: auto; }
+
+  /* Boutique : inventaire à gauche, articles à droite, bouton en bas */
+  #shop.on { display: grid; grid-template-columns: clamp(260px, 30vw, 380px) 1fr; grid-template-rows: 1fr auto; gap: 10px 14px; overflow: hidden; padding-block: 12px; }
+  .shopL, .shopR { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow-y: auto; }
+  .shopR { justify-content: center; }
+  .shopR .items { grid-template-columns: repeat(max(var(--n, 3), 3), minmax(0, 170px)); justify-content: center; }
+  .shopfoot { grid-column: 1 / -1; position: static; background: none; padding-top: 0; display: flex; justify-content: center; }
+  .shopfoot .btn { width: min(520px, 100%); }
+  .services { grid-template-columns: 1fr; }
+
+  /* Choix de la table : les trois tables côte à côte */
+  #select { display: none; }
+  #select.on { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto auto; align-content: center; gap: 10px 14px; padding-block: 12px; overflow-y: auto; }
+  #select > .blinds { grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); align-items: stretch; }
+  #select .blind { grid-template-columns: 1fr; justify-items: center; text-align: center; align-content: center; gap: 8px; min-height: min(320px, 45vh); }
+  #select .blind .bact { width: min(220px, 100%); }
+  #select > .btnrow { grid-column: 1 / -1; width: min(420px, 100%); justify-self: center; }
+
+  #modal { width: min(520px, 100%); }
+  #pack { width: min(640px, 100%); }
+  #sheet { width: min(560px, 100%); }
+}
+
+/* Grand écran (PC) : tout un peu plus gros */
+@media (orientation: landscape) and (min-width: 1100px) and (min-height: 700px) {
+  .btn { font-size: 20px; min-height: 56px; } .mini { min-height: 38px; font-size: 14px; }
+  #tName { font-size: 18px; } #tGoal { font-size: 28px; }
+  .stat span { font-size: 32px; } .stat b { font-size: 11px; }
+  .slot svg { width: 36px; height: 36px; }
+  .cm { font-size: 44px; min-width: 120px; } .sbx { font-size: 36px; } #sbMsg { font-size: 20px; height: 26px; } #sbType { font-size: 14px; height: 18px; }
+  #scorebox { min-height: 100px; }
+  .item { min-height: 150px; } .item svg.ico { width: 52px; height: 52px; } .item .iname { font-size: 14px; } .item .iprice { font-size: 26px; }
+  .item .card { --cw: 60px; } .item .packart { width: 58px; height: 80px; } .item .packart svg { width: 30px; height: 30px; }
+  .zlabel { font-size: 15px; } .zlabel .tot { font-size: 30px; }
+}
+
+/* Téléphone couché : très peu de hauteur */
+@media (orientation: landscape) and (max-height: 500px) {
+  #game, #shop.on, #select.on { padding-block: 6px; }
+  #game > .side { gap: 4px; }
+  #hdr { padding: 3px 8px; } #tRule { font-size: 11px; }
+  #stats { grid-template-columns: repeat(3, 1fr); gap: 4px; } #sScore { grid-column: auto; }
+  .stat span { font-size: 20px; } .stat b { font-size: 9px; }
+  #charmsRow .slots { grid-template-columns: repeat(var(--n, 5), 1fr); grid-auto-rows: 40px; } .slot svg { width: 24px; height: 24px; }
+  #consRow { grid-template-columns: 1fr auto auto; } #consRow .btn, #consRow .cons { min-height: 32px; }
+  .cslot { width: 32px; height: 32px; }
+  #scorebox { min-height: 60px; } .cm { font-size: 26px; } #sbMsg { font-size: 14px; height: 18px; }
+  .btn { min-height: 40px; font-size: 15px; } .arow.small .btn { min-height: 34px; font-size: 13px; }
+  .shophead { padding: 2px 10px; } .shophead h2 { font-size: 20px; } .sec { padding: 4px 8px 6px; gap: 4px; }
+  .item { min-height: 0; padding: 3px 2px; } .item svg.ico { width: 26px; height: 26px; } .item .iname { min-height: 0; font-size: 11px; }
+  .item .card { --cw: 30px; } .item .packart { width: 28px; height: 38px; } .item .packart svg { width: 16px; height: 16px; }
+  #shopSlots { height: 38px; }
+  .shopfoot .btn { min-height: 42px; font-size: 16px; }
+  .logo { font-size: 44px; } .title-cards { display: none; } .tagline { display: none; }
+  #select .blind { gap: 4px; padding: 6px; } .chip { width: 36px; height: 36px; font-size: 18px; border-width: 3px; }
+}
+/* Petit téléphone en portrait : boutique plus serrée */
+@media (orientation: portrait) and (max-height: 700px) {
+  .serv h3 { display: none; }
+  #shopSlots { height: 40px; } .slot svg { width: 24px; height: 24px; }
+  .item { min-height: 84px; } .item .iname { min-height: 0; } .item svg.ico { width: 28px; height: 28px; }
+  .item .packart { width: 32px; height: 44px; } .item .packart svg { width: 18px; height: 18px; }
+  .shophead h2 { font-size: 20px; }
+}
+
+/* Paysage peu haut : choix du paquet sur deux colonnes */
+@media (orientation: landscape) and (min-width: 640px) and (max-height: 600px) {
+  #setup.on { display: grid; grid-template-columns: 1fr 1fr; align-content: center; gap: 8px 14px; padding-block: 8px; }
+  #setup > * { width: auto; margin: 0; }
+  #setup > h2 { grid-column: 1 / -1; font-size: 20px; }
+  #setup > .deckpick { grid-row: 2 / 4; padding: 8px; }
+  #setup .deckcard { min-height: 0; gap: 4px; } #setup .deckart { width: 56px; height: 78px; }
+  #setup .deckdesc { min-height: 0; }
+  #select .blind { min-height: 0; }
+  #select > .selhead { padding: 4px 10px; } #select .sec { padding: 4px 8px 6px; }
+  #select #selSlots { height: 36px !important; }
+}
 </style>
 
 <canvas id="bg" width="90" height="160"></canvas>
@@ -458,6 +598,7 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
   <section id="select" class="screen"></section>
 
   <section id="game" class="screen">
+    <div class="side">
     <div id="hdr" class="px">
       <div id="tName">Petite table</div>
       <div id="tGoal"><small>Objectif</small>20</div>
@@ -477,6 +618,8 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
       <button class="btn b-purple mini" id="bDeck">Paquet</button>
       <button class="btn b-grey mini" id="bOptions">Menu</button>
     </div>
+    </div>
+    <div class="table">
     <div class="zone" id="dealerZone">
       <div class="zlabel"><span>Croupier</span><span class="tot" id="dTot"></span></div>
       <div class="row" id="dRow"></div>
@@ -491,6 +634,7 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
       <div class="hands" id="hands"></div>
     </div>
     <div id="actions"></div>
+    </div>
   </section>
 
   <section id="shop" class="screen"></section>

@@ -13,7 +13,7 @@ const Store = {
 };
 const prog = Object.assign({ maxAnte: 0, wins: 0, stakeMax: 0, bestHand: 0, seen: {}, runs: 0 }, Store.get('prog', {}));
 const saveProg = () => Store.set('prog', prog);
-const opts = Object.assign({ speed: 1, sound: true }, Store.get('opts', {}));
+const opts = Object.assign({ speed: 1, sound: true, fps: false }, Store.get('opts', {}));
 const saveOpts = () => Store.set('opts', opts);
 
 /* ---------- Formatage ---------- */
@@ -254,9 +254,9 @@ function drainLog() { if (!ui.run) return; F.drain(ui.run).forEach(l => toast(l.
 
 /* ---------- Cartes : rangées ---------- */
 function fitCards() {
-  const W = Math.min(window.innerWidth, 480) - 32;
   const z1 = $('#dealerZone'), z2 = $('#playerZone');
-  let cw = Math.min(W * .17, 74);
+  const W = (z2 && z2.clientWidth) || Math.min(window.innerWidth, 480) - 32;
+  let cw = Math.min(W * .17, W > 600 ? 120 : W > 440 ? 96 : 74);
   if ($('#game').classList.contains('on') && z1 && z2) {
     const zh = Math.min(z1.clientHeight, z2.clientHeight);
     if (zh > 0) cw = Math.min(cw, (zh - 36) / 1.42);
@@ -1042,16 +1042,20 @@ function renderShop() {
   const rr = F.rerollCost(run);
   const B = F.blinds(run)[run.blindIdx];
   $('#shop').innerHTML = `
+    <div class="shopL">
     <div class="shophead px"><h2>Boutique</h2><span class="money">${run.money < 0 ? '-' : ''}$${Math.abs(run.money)}</span></div>
     <div class="sec px"><h3><span>Tes porte-bonheur ${run.charms.filter(x => x.ed !== 'negatif').length}/${F.baseSlots(run)}</span><span>consommables ${run.consumables.length}/${F.consSlots(run)}</span></h3>
-      <div class="slots" id="shopSlots" style="height:54px"></div><div class="cons" id="shopCons"></div></div>
-    <div class="sec px"><h3><span>Articles</span><span>${s.freeRerolls ? s.freeRerolls + ' relance gratuite' : ''}</span></h3><div class="items" style="--n:${Math.min(4, s.items.length)}">${items}</div>
-      <button class="btn b-purple" id="sRoll" ${F.canAfford(run, rr) ? '' : 'disabled'}>Relancer les articles<small>${rr === 0 ? 'gratuit' : '$' + rr}</small></button></div>
-    <div class="sec px"><h3><span>Paquets</span><span>${vouchers ? 'Talisman' : ''}</span></h3><div class="items" style="--n:${s.packs.length + s.vouchers.filter(Boolean).length}">${packs}${vouchers}</div></div>
-    <div class="sec px"><h3><span>Services</span><span>${run.deck.length} cartes</span></h3><div class="services">
-      <button class="btn b-red" id="sBurn" ${burnOk ? '' : 'disabled'}>Brûler une carte<small>$${run.burnCost}${run.deck.length <= 20 ? ' · minimum 20' : ''}</small></button>
-      <button class="btn b-grey" id="sDeck">Mon paquet<small>cartes et niveaux</small></button>
+      <div class="slots" id="shopSlots"></div><div class="cons" id="shopCons"></div></div>
+    <div class="sec px serv"><h3><span>Services</span><span>${run.deck.length} cartes</span></h3><div class="services">
+      <button class="btn b-red mini" id="sBurn" ${burnOk ? '' : 'disabled'}>Brûler une carte · $${run.burnCost}${run.deck.length <= 20 ? ' (min 20)' : ''}</button>
+      <button class="btn b-grey mini" id="sDeck">Mon paquet</button>
     </div></div>
+    </div>
+    <div class="shopR">
+    <div class="sec px"><h3><span>Articles</span><span>${s.freeRerolls ? s.freeRerolls + ' relance gratuite' : ''}</span></h3><div class="items" style="--n:${Math.min(4, s.items.length)}">${items}</div>
+      <button class="btn b-purple mini" id="sRoll" ${F.canAfford(run, rr) ? '' : 'disabled'}>Relancer les articles · ${rr === 0 ? 'gratuit' : '$' + rr}</button></div>
+    <div class="sec px"><h3><span>Paquets</span><span>${vouchers ? 'Talisman' : ''}</span></h3><div class="items" style="--n:${s.packs.length + s.vouchers.filter(Boolean).length}">${packs}${vouchers}</div></div>
+    </div>
     <div class="shopfoot"><button class="btn ${B.boss ? 'b-red' : 'b-gold'}" id="sNext">Table suivante<small>${esc(B.name)} · objectif ${fmt(B.target)}</small></button></div>`;
   renderSlots($('#shopSlots'), { prices: true });
   renderCons($('#shopCons'));
@@ -1145,6 +1149,39 @@ function newGame(deck, stake) {
   Store.del('run');
   showSelect();
 }
+/* ---------- Compteur d'images par seconde ---------- */
+// Mesure en continu (une seule requête d'image par frame, coût négligeable).
+// stats() est aussi utilisé par les tests automatiques.
+const FPS = {
+  el: null, frames: 0, t0: 0, last: 0, worst: 0, now: 0, low: 0, hist: [],
+  start() {
+    const tick = t => {
+      if (this.last) { const dt = t - this.last; this.worst = Math.max(this.worst, dt); this.hist.push(dt); if (this.hist.length > 600) this.hist.shift(); }
+      this.last = t; this.frames++;
+      if (!this.t0) this.t0 = t;
+      if (t - this.t0 >= 500) {
+        this.now = this.frames * 1000 / (t - this.t0); this.low = 1000 / Math.max(this.worst, 1);
+        if (this.el) { this.el.textContent = `${Math.round(this.now)} FPS · min ${Math.round(this.low)}`; this.el.className = this.now >= 55 ? 'ok' : this.now >= 40 ? 'mid' : 'bad'; }
+        this.frames = 0; this.t0 = t; this.worst = 0;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    this.show(opts.fps);
+  },
+  show(on) {
+    if (on && !this.el) { this.el = document.createElement('div'); this.el.id = 'fpsMeter'; this.el.textContent = '-- FPS'; document.body.appendChild(this.el); }
+    if (!on && this.el) { this.el.remove(); this.el = null; }
+  },
+  reset() { this.hist = []; },
+  stats() {
+    const h = this.hist.slice().sort((a, b) => a - b), n = h.length;
+    if (!n) return { frames: 0 };
+    const avg = h.reduce((a, b) => a + b, 0) / n;
+    return { frames: n, fps: +(1000 / avg).toFixed(1), p1Low: +(1000 / h[Math.min(n - 1, Math.floor(n * .99))]).toFixed(1), worstMs: +h[n - 1].toFixed(1), over20ms: h.filter(x => x > 20).length };
+  },
+};
+function fpsLabel() { return opts.fps ? 'Compteur FPS : affiché' : 'Compteur FPS : masqué'; }
 function soundLabel() { return opts.sound ? 'Son : activé' : 'Son : coupé'; }
 function openOptions(inRun) {
   Snd.click();
@@ -1152,11 +1189,13 @@ function openOptions(inRun) {
     <div style="display:grid;gap:8px;text-align:left"><b>Vitesse des animations</b>
       <div class="btnrow">${[1, 2, 3, 4].map(v => `<button class="btn ${opts.speed === v ? 'b-purple' : 'b-grey'} mini" data-sp="${v}">×${v}</button>`).join('')}</div></div>
     <button class="btn b-grey" id="oSound">${soundLabel()}</button>
+    <button class="btn b-grey" id="oFps">${fpsLabel()}</button>
     ${inRun ? '<button class="btn b-purple" id="oHow">Comment jouer</button><button class="btn b-red" id="oQuit">Abandonner la partie</button><button class="btn b-grey" id="oTitle">Sauvegarder et quitter</button>' : ''}
     <button class="btn b-gold" id="mClose">Fermer</button>`,
     m => {
       m.querySelectorAll('[data-sp]').forEach(b => { b.onclick = () => { opts.speed = +b.dataset.sp; saveOpts(); applySpeed(); openOptions(inRun); }; });
       m.querySelector('#oSound').onclick = () => { opts.sound = !opts.sound; saveOpts(); Snd.init(); Snd.click(); openOptions(inRun); };
+      m.querySelector('#oFps').onclick = () => { opts.fps = !opts.fps; saveOpts(); FPS.show(opts.fps); Snd.click(); openOptions(inRun); };
       m.querySelector('#mClose').onclick = closeModal;
       if (inRun) {
         m.querySelector('#oHow').onclick = howTo;
@@ -1262,8 +1301,9 @@ function boot() {
   $('#bOptions').onclick = () => { if (ui.busy) return; openOptions(true); };
   $('#game').addEventListener('pointerdown', e => { if (ui.busy && !e.target.closest('button')) ui.fast = true; });
   window.addEventListener('resize', fitCards);
+  FPS.start();
   toTitle();
 }
 boot();
-window.__f21 = { BG, ui, F, showShop, showSelect, renderGame, openDeck, dealFlow, toTitle, startTableUI, openPackUI, prog };
+window.__f21 = { FPS, BG, ui, F, showShop, showSelect, renderGame, openDeck, dealFlow, toTitle, startTableUI, openPackUI, prog };
 })();

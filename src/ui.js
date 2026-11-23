@@ -28,13 +28,6 @@ function sprite(rows, cls, color) {
   return `<svg class="${cls || ''}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true"${color ? ` style="color:${color}"` : ''}><path d="${d}" fill="currentColor"/></svg>`;
 }
 const SP = {
-  H: ['.##.##.', '#######', '#######', '#######', '.#####.', '..###..', '...#...'],
-  D: ['...#...', '..###..', '.#####.', '#######', '.#####.', '..###..', '...#...'],
-  S: ['...#...', '..###..', '.#####.', '#######', '#######', '...#...', '..###..'],
-  C: ['..###..', '..###..', '##.#.##', '#######', '##.#.##', '...#...', '..###..'],
-  R: ['#..#..#', '##.#.##', '#######', '#######', '#.#.#.#', '#######'],
-  Q: ['.#.#.#.', '#######', '.#####.', '.#.#.#.', '.#####.', '#######'],
-  J: ['...##..', '..####.', '.##.#..', '.####..', '..##...', '.####..'],
   star: ['...##...', '...##...', '########', '.######.', '..####..', '.##..##.', '##....##', '........'],
   gem: ['.######.', '##.##.##', '########', '.######.', '..####..', '...##...', '........', '........'],
   ghost: ['..####..', '.######.', '##.##.##', '########', '########', '########', '#.#..#.#', '........'],
@@ -107,16 +100,46 @@ const PACK_COL = { arcane: ['#5b2aa8', '#8a4be6', SP.moon], etoile: ['#9c7400', 
 const packArt = (type, cls) => { const p = PACK_COL[type]; return `<div class="packart ${cls || ''}" style="--pa:${p[0]};--pb:${p[1]}">${sprite(p[2])}</div>`; };
 const KIND_NAME = { arcane: 'Arcane', etoile: 'Étoile', spectre: 'Spectre' };
 
+/* ---------- Cartes à jouer (vectoriel) ----------
+   Enseignes dessinées une fois en <symbol>, réutilisées par <use>.
+   Repère d'une face : 100 × 140 (même ratio que la carte). */
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="su-H" viewBox="0 0 100 100"><path fill="currentColor" d="M50 94C45 84 4 60 4 31 4 15 16 5 29 5c10 0 17 6 21 14 4-8 11-14 21-14 13 0 25 10 25 26 0 29-41 53-46 63z"/></symbol>
+<symbol id="su-D" viewBox="0 0 100 100"><path fill="currentColor" d="M50 3c11 18 26 34 42 47-16 13-31 29-42 47C39 79 24 63 8 50 24 37 39 21 50 3z"/></symbol>
+<symbol id="su-S" viewBox="0 0 100 100"><path fill="currentColor" d="M50 4c5 13 46 36 46 62 0 15-11 23-23 23-9 0-16-4-19-10 1 9 5 15 13 19H33c8-4 12-10 13-19-3 6-10 10-19 10C15 89 4 81 4 66 4 40 45 17 50 4z"/></symbol>
+<symbol id="su-C" viewBox="0 0 100 100"><g fill="currentColor"><circle cx="50" cy="27" r="21"/><circle cx="27" cy="60" r="21"/><circle cx="73" cy="60" r="21"/><path d="M42 38h16l5 28H37z"/><path d="M47 60c0 15-4 27-14 38h34C57 87 53 75 53 60z"/></g></symbol>
+</defs></svg>`);
+const suitIcon = s => `<svg viewBox="0 0 100 100" aria-hidden="true"><use href="#su-${s}" width="100" height="100"/></svg>`;
+const pip = (s, x, y, d, flip) => `<use href="#su-${s}" x="${x - d / 2}" y="${y - d / 2}" width="${d}" height="${d}"${flip ? ` transform="rotate(180 ${x} ${y})"` : ''}/>`;
+const PIPS = (() => {
+  const L = 33, C = 50, R = 67, T = 26, B = 114, M = 70, q1 = T + (B - T) / 3, q2 = T + 2 * (B - T) / 3;
+  const corners = [[L, T], [R, T], [L, B], [R, B]], six = [...corners, [L, M], [R, M]], four = [...corners, [L, q1], [R, q1], [L, q2], [R, q2]];
+  return {
+    2: [[C, T], [C, B]], 3: [[C, T], [C, M], [C, B]], 4: corners, 5: [...corners, [C, M]], 6: six,
+    7: [...six, [C, (T + M) / 2]], 8: [...six, [C, (T + M) / 2], [C, (M + B) / 2]],
+    9: [...four, [C, M]], 10: [...four, [C, (T + q1) / 2], [C, (q2 + B) / 2]],
+  };
+})();
+const EMBLEM = {
+  11: '<path d="M2 17C2 9 8 6 15 6s11 4 11 11z"/><path d="M15 7c2-4 7-7 13-7-3 3-7 6-11 8z"/><rect x="2" y="14" width="24" height="3.5" rx="1"/>',
+  12: '<path d="M1 17c0-6 3-9 6-7 1-4 4-7 7-9 3 2 6 5 7 9 3-2 6 1 6 7z"/><circle class="gem" cx="14" cy="11.5" r="2.6"/>',
+  13: '<path d="M1 17 0 5l7.5 5L14 1l6.5 9L28 5l-1 12z"/><rect x="1" y="14" width="26" height="4" rx="1"/><circle cx="0" cy="4.5" r="1.8"/><circle cx="14" cy="1" r="2"/><circle cx="28" cy="4.5" r="1.8"/>',
+};
+function cardArt(c) {
+  const s = c.suit;
+  if (c.rank === 1) return `<circle class="ring" cx="50" cy="70" r="33"/>${pip(s, 50, 70, 48)}`;
+  if (c.rank >= 11) return `<rect class="fp" x="26" y="15" width="48" height="110" rx="4"/><rect class="fi" x="29.5" y="18.5" width="41" height="103" rx="2"/>`
+    + `<g class="em" transform="translate(36 25)">${EMBLEM[c.rank]}</g><text class="fl" x="50" y="93" text-anchor="middle">${{ 11: 'V', 12: 'D', 13: 'R' }[c.rank]}</text>${pip(s, 50, 109, 13, true)}`;
+  return PIPS[c.rank].map(([x, y]) => pip(s, x, y, 18, y > 70)).join('');
+}
 function cardHTML(c, extra) {
   const red = c.suit === 'H' || c.suit === 'D';
-  const lab = F.RANKS[c.rank];
-  const suitSvg = sprite(SP[c.suit]);
-  const center = c.rank >= 11 ? sprite(SP[{ 11: 'J', 12: 'Q', 13: 'R' }[c.rank]], 'fig') + sprite(SP[c.suit], 'mini') : sprite(SP[c.suit]);
   const cls = ['card', red ? 'red' : '', c.rank === 1 ? 'ace' : '', c.rank >= 11 ? 'face' : '', c.enh ? 'e-' + c.enh : '', c.ed ? 'ed-' + c.ed : '', extra || ''].join(' ');
+  const idx = `<b>${F.RANKS[c.rank]}</b>${suitIcon(c.suit)}`, ten = c.rank === 10 ? ' ten' : '';
   const tag = c.enh ? `<span class="etag">${F.ENH[c.enh].tag}</span>` : '';
   const seal = c.seal ? `<span class="seal s-${c.seal}"></span>` : '';
   const bonus = c.bonus ? ` title="+${c.bonus} Jetons"` : '';
-  return `<div class="${cls}" data-id="${c.id}"${bonus}><div class="cface"><span class="ci tl">${lab}${suitSvg}</span><span class="cc">${center}</span><span class="ci br">${lab}${suitSvg}</span>${tag}${seal}</div><div class="cback"></div></div>`;
+  return `<div class="${cls}" data-id="${c.id}"${bonus}><div class="cface"><svg class="cc" viewBox="0 0 100 140" aria-hidden="true">${cardArt(c)}</svg><span class="ci tl${ten}">${idx}</span><span class="ci br${ten}">${idx}</span>${tag}${seal}</div><div class="cback"></div></div>`;
 }
 function cardEl(c) { const t = document.createElement('div'); t.innerHTML = cardHTML(c); return t.firstChild; }
 function cardName(c) { return `${F.RANKS[c.rank]} de ${{ H: 'Cœur', D: 'Carreau', S: 'Pique', C: 'Trèfle' }[c.suit]}`; }

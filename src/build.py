@@ -2,6 +2,7 @@ import pathlib
 here = pathlib.Path(__file__).parent
 shell = (here / 'shell.html').read_text()
 out = (shell.replace('/*DATA*/', (here / 'data.js').read_text())
+            .replace('/*ICONS*/', (here / 'icons.js').read_text())
             .replace('/*ENGINE*/', (here / 'engine.js').read_text())
             .replace('/*UI*/', (here / 'ui.js').read_text()))
 (here.parent / 'fievre21.html').write_text(out)

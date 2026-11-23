@@ -21,83 +21,34 @@ const fmt = n => { n = Math.floor(n); if (Math.abs(n) >= 1e9) return n.toExponen
 const fmtM = n => { const r = Math.round(n * 100) / 100; return Number.isInteger(r) ? fmt(r) : r.toLocaleString('fr-FR', { maximumFractionDigits: 2 }); };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
-/* ---------- Sprites pixel ---------- */
-function sprite(rows, cls, color) {
-  const h = rows.length, w = rows[0].length; let d = '';
-  rows.forEach((r, y) => { let x = 0; while (x < w) { if (r[x] === '#') { const s = x; while (x < w && r[x] === '#') x++; d += `M${s} ${y}h${x - s}v1h-${x - s}z`; } else x++; } });
-  return `<svg class="${cls || ''}" viewBox="0 0 ${w} ${h}" shape-rendering="crispEdges" aria-hidden="true"${color ? ` style="color:${color}"` : ''}><path d="${d}" fill="currentColor"/></svg>`;
+/* ---------- Icônes vectorielles (game-icons.net, CC BY 3.0 — voir icons.js) ---------- */
+const GI = window.F21I;
+function gIcon(name, cls, color) {
+  const p = GI.paths[name] || '';
+  return `<svg class="${cls || ''}" viewBox="0 0 512 512" aria-hidden="true"${color ? ` style="color:${color}"` : ''}>${p[0] === '<' ? p : `<path fill="currentColor" d="${p}"/>`}</svg>`;
 }
-const SP = {
-  star: ['...##...', '...##...', '########', '.######.', '..####..', '.##..##.', '##....##', '........'],
-  gem: ['.######.', '##.##.##', '########', '.######.', '..####..', '...##...', '........', '........'],
-  ghost: ['..####..', '.######.', '##.##.##', '########', '########', '########', '#.#..#.#', '........'],
-  moon: ['..####..', '.###....', '###.....', '###.....', '###.....', '.###....', '..####..', '........'],
-  charm: ['.##..##.', '########', '########', '.######.', '..####..', '...##...', '...##...', '..####..'],
-  cards: ['.####...', '.#..####', '.#..#..#', '.#..#..#', '.####..#', '....#..#', '....####', '........'],
-};
-const CHARM_ART = {
-  pilepoil: ['#3ef08a', ['..####..', '.#....#.', '#..##..#', '#.#..#.#', '#.#..#.#', '#..##..#', '.#....#.', '..####..']],
-  charlie: ['#5fd0ff', ['.####...', '.#..####', '.#..#..#', '.#..#..#', '.####..#', '....#..#', '....####', '........']],
-  cassecou: ['#f6efff', ['..####..', '.######.', '##.##.##', '##.##.##', '.######.', '..#..#..', '..####..', '........']],
-  prudence: ['#33c4ff', ['########', '#......#', '#..##..#', '#.####.#', '#..##..#', '.#....#.', '..#..#..', '...##...']],
-  maudit: ['#ff3b6b', ['#......#', '##....##', '.######.', '##.##.##', '########', '#.####.#', '.#....#.', '..####..']],
-  lynx: ['#ffd23f', ['........', '..####..', '.##..##.', '##.##.##', '##.##.##', '.##..##.', '..####..', '........']],
-  boule: ['#b56cff', ['..####..', '.#..###.', '#..#####', '#.######', '.######.', '..####..', '.######.', '########']],
-  chasseur: ['#ffd23f', ['...##...', '..####..', '.##..##.', '.##..##.', '.######.', '##....##', '##....##', '........']],
-  sang: ['#ff3b6b', ['...#....', '...##...', '..####..', '.######.', '.##.###.', '.#.####.', '..####..', '........']],
-  encre: ['#8f9bff', ['..####..', '...##...', '.######.', '#......#', '#.####.#', '#.####.#', '#......#', '.######.']],
-  cour: ['#ffd23f', ['........', '#..##..#', '##.##.##', '########', '########', '#.#..#.#', '########', '........']],
-  septieme: ['#5fd0ff', ['########', '########', '.....##.', '....##..', '...##...', '..##....', '..##....', '........']],
-  calibre: ['#ff9f1a', ['...##...', '..####..', '..####..', '..####..', '.######.', '.#....#.', '.######.', '.######.']],
-  elan: ['#ffd23f', ['....###.', '...###..', '..###...', '.######.', '...###..', '..###...', '.###....', '.#......']],
-  tirelire: ['#ff8fc8', ['........', '..####.#', '.######.', '########', '#######.', '.######.', '.#.##.#.', '........']],
-  poignee: ['#f2c49b', ['........', '##....##', '###..###', '.######.', '..####..', '.######.', '##....##', '........']],
-  filet: ['#46f08c', ['#..#..#.', '.##.##.#', '.##.##.#', '#..#..#.', '.##.##.#', '.##.##.#', '#..#..#.', '........']],
-  quitte: ['#ff3b6b', ['######..', '#....#..', '#.##.###', '#.##.#.#', '#....#.#', '######.#', '...#..##', '...#####']],
-  mainpleine: ['#3ef08a', ['...##...', '...##...', '...##...', '########', '########', '...##...', '...##...', '...##...']],
-  ferrailleur: ['#a596c9', ['.###....', '#..##...', '#...##..', '.#..##..', '....##..', '.....##.', '......##', '.......#']],
-  dividende: ['#ffd23f', ['...#....', '.#####..', '##.#....', '.####...', '...#.##.', '.#####..', '...#....', '........']],
-  capitaliste: ['#3ef08a', ['..#..#..', '...##...', '..####..', '.######.', '###..###', '##.##.##', '.######.', '..####..']],
-  artisan: ['#ff9f1a', ['.######.', '.######.', '.##.....', '...##...', '...##...', '...##...', '...##...', '...##...']],
-  minimaliste: ['#f6efff', ['........', '........', '..####..', '..#..#..', '..#..#..', '..####..', '........', '........']],
-  tetebrulee: ['#ff6a1a', ['...#....', '...##...', '..###.#.', '.#####..', '.##.###.', '##..####', '###.####', '.######.']],
-  contre: ['#5fd0ff', ['.......#', '......##', '.....##.', '#...##..', '##.##...', '.###....', '..##....', '.#..#...']],
-  banane: ['#ffd23f', ['......#.', '.....##.', '.....##.', '....###.', '...###..', '.####...', '###.....', '........']],
-  bananebleue: ['#33c4ff', ['......#.', '.....##.', '.....##.', '....###.', '...###..', '.####...', '###.....', '........']],
-  dragon: ['#ffd23f', ['#......#', '##.##.##', '.######.', '##.##.##', '########', '.#.##.#.', '..####..', '.##..##.']],
-  phenix: ['#ff6a1a', ['#..##..#', '##.##.##', '.######.', '..####..', '.######.', '##.##.##', '#..##..#', '...##...']],
-  sphinx: ['#ffd23f', ['..####..', '.######.', '##.##.##', '########', '.#.##.#.', '########', '########', '##....##']],
-  chimere: ['#ff5ad9', ['##....##', '.##..##.', '..####..', '.##..##.', '########', '#.####.#', '..#..#..', '.##..##.']],
-  kraken: ['#5ff0ff', ['..####..', '.######.', '##.##.##', '########', '#.#..#.#', '#.#..#.#', '.#.##.#.', '#..##..#']],
+const CHARM_COL = {
+  pilepoil: '#3ef08a', charlie: '#5fd0ff', cassecou: '#f6efff', prudence: '#33c4ff', maudit: '#ff3b6b', lynx: '#ffd23f',
+  boule: '#b56cff', chasseur: '#ffd23f', sang: '#ff3b6b', encre: '#8f9bff', cour: '#ffd23f', septieme: '#5fd0ff',
+  calibre: '#ff9f1a', elan: '#ffd23f', tirelire: '#ff8fc8', poignee: '#f2c49b', filet: '#46f08c', quitte: '#ff3b6b',
+  mainpleine: '#3ef08a', ferrailleur: '#a596c9', dividende: '#ffd23f', capitaliste: '#3ef08a', artisan: '#ff9f1a', minimaliste: '#f6efff',
+  tetebrulee: '#ff6a1a', contre: '#5fd0ff', banane: '#ffd23f', bananebleue: '#33c4ff', dragon: '#ffd23f', phenix: '#ff6a1a',
+  sphinx: '#ffd23f', chimere: '#ff5ad9', kraken: '#5ff0ff',
 };
 const PAL = ['#ff3b6b', '#33c4ff', '#ffd23f', '#3ef08a', '#b56cff', '#ff9f1a', '#5ff0ff', '#ff8fc8', '#f6efff', '#8f9bff', '#46f08c', '#ffb36b'];
 function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-function procSprite(id) {
-  let h = hash(id) || 1;
-  const rnd = () => { h ^= h << 13; h ^= h >>> 17; h ^= h << 5; h >>>= 0; return h / 4294967296; };
-  const rows = [];
-  for (let y = 0; y < 8; y++) {
-    let l = '';
-    for (let x = 0; x < 4; x++) { const p = (y === 0 || y === 7) ? 0.32 : x === 3 ? 0.78 : x === 0 ? 0.38 : 0.55; l += rnd() < p ? '#' : '.'; }
-    rows.push(l + l.split('').reverse().join(''));
-  }
-  return rows;
-}
-function charmArt(id) {
-  if (CHARM_ART[id]) return CHARM_ART[id];
-  const d = F.CHARMS[id];
-  return [d && d.rarity === 'l' ? '#ffd23f' : PAL[hash(id) % PAL.length], procSprite(id)];
-}
-const charmIcon = id => { const a = charmArt(id); return sprite(a[1], 'ico', a[0]); };
+const charmColor = id => CHARM_COL[id] || (F.CHARMS[id] && F.CHARMS[id].rarity === 'l' ? '#ffd23f' : PAL[hash(id) % PAL.length]);
+const charmIcon = id => gIcon(GI.map.charm[id], 'ico', charmColor(id));
+const SEAL_COL = { marqueor: '#ffd23f', marquerouge: '#ff2d4a', marquebleue: '#33c4ff', marqueviolette: '#b56cff' };
 function consIcon(c) {
-  if (c.kind === 'etoile') return sprite(SP.star, 'ico');
-  if (c.kind === 'spectre') return sprite(c.id === 'ame' ? SP.charm : c.id === 'trounoir' ? SP.moon : SP.ghost, 'ico');
-  return sprite(procSprite('a' + c.id), 'ico');
+  if (c.kind === 'etoile') return gIcon(GI.map.misc.etoile, 'ico');
+  return gIcon(GI.map[c.kind][c.id], 'ico', SEAL_COL[c.id]);
 }
-const tagIcon = id => sprite(procSprite('t' + id), 'ico');
+const tagIcon = id => gIcon(GI.map.tag[id], 'ico');
+const voucherIcon = (id, cls) => gIcon(GI.map.voucher[id], cls);
 const RAR = { c: 'Commun', u: 'Peu commun', r: 'Rare', l: 'Légendaire' };
-const PACK_COL = { arcane: ['#5b2aa8', '#8a4be6', SP.moon], etoile: ['#9c7400', '#e9a800', SP.star], cartes: ['#0a6b99', '#1f8fe0', SP.cards], charme: ['#99133a', '#e2234b', SP.charm], spectre: ['#0b5c66', '#17a9b8', SP.ghost] };
-const packArt = (type, cls) => { const p = PACK_COL[type]; return `<div class="packart ${cls || ''}" style="--pa:${p[0]};--pb:${p[1]}">${sprite(p[2])}</div>`; };
+const PACK_COL = { arcane: ['#5b2aa8', '#8a4be6'], etoile: ['#9c7400', '#e9a800'], cartes: ['#0a6b99', '#1f8fe0'], charme: ['#99133a', '#e2234b'], spectre: ['#0b5c66', '#17a9b8'] };
+const packArt = (type, cls) => { const p = PACK_COL[type]; return `<div class="packart ${cls || ''}" style="--pa:${p[0]};--pb:${p[1]}">${gIcon(GI.map.pack[type])}</div>`; };
 const KIND_NAME = { arcane: 'Arcane', etoile: 'Étoile', spectre: 'Spectre' };
 
 /* ---------- Cartes à jouer (vectoriel) ----------
@@ -1060,7 +1011,7 @@ function renderShop() {
     const P = F.PACKS[pk.type], S = F.PACK_SIZES[pk.size], p = F.packPrice(run, pk);
     return `<button class="item tilt" data-k="pack" data-i="${i}" style="--i:${i + 3}">${packArt(pk.type)}<span class="iname">${({ arcane: 'Arcanes', etoile: 'Étoiles', cartes: 'Cartes', charme: 'Porte-bonheur', spectre: 'Spectral' })[pk.type]}${S.name ? ' ' + S.name : ''}</span><span class="iprice ${p === 0 ? 'free' : ''}">${p === 0 ? 'Gratuit' : '$' + p}</span></button>`;
   }).join('');
-  const vouchers = s.vouchers.map((v, i) => v ? `<button class="item tilt k-voucher" data-k="voucher" data-i="${i}" style="--i:${i + 5}">${sprite(SP.gem, 'ico')}<span class="iname">${esc(F.VOUCHERS[v].name)}</span><span class="iprice">$${F.voucherPrice(run)}</span></button>` : '').join('');
+  const vouchers = s.vouchers.map((v, i) => v ? `<button class="item tilt k-voucher" data-k="voucher" data-i="${i}" style="--i:${i + 5}">${voucherIcon(v, 'ico')}<span class="iname">${esc(F.VOUCHERS[v].name)}</span><span class="iprice">$${F.voucherPrice(run)}</span></button>` : '').join('');
   const burnOk = run.deck.length > 20 && F.canAfford(run, run.burnCost);
   const rr = F.rerollCost(run);
   const B = F.blinds(run)[run.blindIdx];
@@ -1115,7 +1066,7 @@ function openShopItem(kind, i) {
     desc = `Ouvre-le pour choisir ${S.pick} carte${S.pick > 1 ? 's' : ''} parmi ${S.n[P.kind]}.`; buyLabel = 'Ouvrir';
   } else {
     const v = s.vouchers[i], V = F.VOUCHERS[v]; price = F.voucherPrice(run);
-    head = `<div class="sh-head"><div class="sh-icon" style="color:#ff9f1a">${sprite(SP.gem)}</div><div><div class="sh-name">${esc(V.name)}</div><div class="sh-rar" style="color:#ff9f1a">Talisman · permanent</div></div></div>`;
+    head = `<div class="sh-head"><div class="sh-icon" style="color:#ff9f1a">${voucherIcon(v)}</div><div><div class="sh-name">${esc(V.name)}</div><div class="sh-rar" style="color:#ff9f1a">Talisman · permanent</div></div></div>`;
     desc = V.desc + '.'; if (V.req) extra = `<div class="sh-extra">Amélioration de ${esc(F.VOUCHERS[V.req].name)}.</div>`;
   }
   const afford = F.canAfford(run, price);

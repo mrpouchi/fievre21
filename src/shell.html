@@ -140,11 +140,20 @@ button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .slots { display: grid; grid-template-columns: repeat(var(--n, 5), 1fr); gap: 5px; height: 100%; }
 .slot { position: relative; border: 2px dashed #3d2d70; background: rgba(10,4,22,.6); display: grid; place-items: center; padding: 0; min-width: 0; }
 .slot.full { border: 2px solid var(--rc, var(--r-c)); background: rgba(16,6,36,.92); box-shadow: inset 0 0 12px color-mix(in srgb, var(--rc) 35%, transparent); animation: bob 3s ease-in-out infinite; animation-delay: calc(var(--i) * -.6s); }
-.slot svg { width: 30px; height: 30px; }
+.slot svg { width: 30px; height: 30px; } .slot svg.coin { width: 42px; height: 42px; }
 /* Icônes vectorielles : légère ombre portée pour les détacher des panneaux sombres */
 svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg { filter: drop-shadow(0 2px 0 rgba(0,0,0,.6)); overflow: visible; }
 .slot .price { position: absolute; bottom: 0; left: 0; right: 0; font-family: var(--f-num); font-size: 14px; line-height: 1; color: var(--gold); background: rgba(0,0,0,.6); }
 .slot.trig { animation: wobble .38s cubic-bezier(.3,1.4,.5,1) 1; }
+/* Porte-bonheur sur jeton : il remplit l'emplacement, et tourne comme une pièce quand il se déclenche */
+.slot svg.coin { filter: drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+svg.coin.pix image { image-rendering: pixelated; image-rendering: crisp-edges; }
+.slot:has(.price) svg.coin { margin-bottom: 9px; }
+.slot.trig > svg.coin { animation: chipflip .45s ease-out; }
+@keyframes chipflip { from { transform: rotateY(0); } to { transform: rotateY(360deg); } }
+.sh-icon svg.coin { width: 54px; height: 54px; } .colitem svg.coin { width: 38px; height: 38px; }
+#tip .sh-icon svg.coin { width: 40px; height: 40px; }
+.sh-icon:has(svg.coin) { border-radius: 50%; border-color: transparent; background: none; }
 @keyframes wobble { 0%{transform:rotate(0) scale(1)} 30%{transform:rotate(-12deg) scale(1.22)} 60%{transform:rotate(10deg) scale(1.22)} 100%{transform:rotate(0) scale(1)} }
 .slot.off::after, .slot.dead::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: var(--mult); font-size: 30px; background: rgba(0,0,0,.55); }
 .slot.dead { filter: grayscale(1); }
@@ -366,7 +375,7 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
   animation: fanin .45s cubic-bezier(.2,.9,.3,1.3) both; animation-delay: calc(var(--i) * .07s); }
 @keyframes fanin { from { transform: translateY(-80px) rotateY(90deg) scale(.6); opacity: 0; } }
 .choice.sel { outline: 3px solid var(--gold); outline-offset: 2px; transform: translateY(-6px); }
-.choice svg.ico { width: 40px; height: 40px; }
+.choice svg.ico { width: 40px; height: 40px; } .choice svg.coin { width: 54px; height: 54px; }
 .choice .iname { font-size: 12px; line-height: 1.1; }
 .choice .card { --cw: 52px; animation: none; }
 .choice.k-arcane { --rc: var(--purple); } .choice.k-arcane svg.ico { color: #d6a8ff; }
@@ -415,7 +424,7 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
 .items { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); gap: 8px; }
 .item { border: 2px solid var(--rc, #3d2d70); background: rgba(10,4,24,.78); padding: 8px 4px 6px; display: grid; justify-items: center; gap: 4px; text-align: center; min-width: 0; min-height: 116px; align-content: start; position: relative;
   animation: fanin .45s cubic-bezier(.2,.9,.3,1.3) both; animation-delay: calc(var(--i) * .06s); }
-.item svg.ico { width: 38px; height: 38px; }
+.item svg.ico { width: 38px; height: 38px; } .item svg.coin { width: 51px; height: 51px; }
 .item .iname { font-size: 12px; line-height: 1.1; min-height: 27px; display: grid; place-items: center; }
 .item .iprice { font-family: var(--f-num); font-size: 22px; color: var(--gold); line-height: 1; }
 .item .iprice.free { color: var(--green); }
@@ -474,7 +483,7 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
   .shophead { padding: 4px 10px; } .shophead .money { font-size: 28px; }
   .sec { padding: 6px 8px 8px; gap: 6px; }
   .item { min-height: 96px; padding: 5px 3px 4px; gap: 2px; }
-  .item svg.ico { width: 32px; height: 32px; }
+  .item svg.ico { width: 32px; height: 32px; } .item svg.coin { width: 43px; height: 43px; }
   .item .packart { width: 38px; height: 52px; }
   #shopSlots { height: 46px; }
   .shopfoot { padding-top: 6px; } .shopfoot .btn { min-height: 50px; font-size: 18px; }
@@ -486,10 +495,10 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
 @media (min-width: 600px) and (orientation: portrait) {
   #app { max-width: 680px; }
   .btn { font-size: 20px; min-height: 56px; } .mini { min-height: 38px; font-size: 14px; }
-  #charmsRow, #shopSlots { height: 64px; } .slot svg { width: 38px; height: 38px; }
+  #charmsRow, #shopSlots { height: 64px; } .slot svg { width: 38px; height: 38px; } .slot svg.coin { width: 53px; height: 53px; }
   .stat span { font-size: 28px; } .stat b { font-size: 11px; }
   #tName { font-size: 18px; } #tGoal { font-size: 26px; }
-  .item { min-height: 130px; } .item svg.ico { width: 46px; height: 46px; } .item .iname { font-size: 14px; }
+  .item { min-height: 130px; } .item svg.ico { width: 46px; height: 46px; } .item svg.coin { width: 62px; height: 62px; } .item .iname { font-size: 14px; }
   .item .card { --cw: 54px; }
 }
 
@@ -542,10 +551,10 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
   .btn { font-size: 20px; min-height: 56px; } .mini { min-height: 38px; font-size: 14px; }
   #tName { font-size: 18px; } #tGoal { font-size: 28px; }
   .stat span { font-size: 32px; } .stat b { font-size: 11px; }
-  .slot svg { width: 36px; height: 36px; }
+  .slot svg { width: 36px; height: 36px; } .slot svg.coin { width: 50px; height: 50px; }
   .cm { font-size: 44px; min-width: 120px; } .sbx { font-size: 36px; } #sbMsg { font-size: 20px; height: 26px; } #sbType { font-size: 14px; height: 18px; }
   #scorebox { min-height: 100px; }
-  .item { min-height: 150px; } .item svg.ico { width: 52px; height: 52px; } .item .iname { font-size: 14px; } .item .iprice { font-size: 26px; }
+  .item { min-height: 150px; } .item svg.ico { width: 52px; height: 52px; } .item svg.coin { width: 70px; height: 70px; } .item .iname { font-size: 14px; } .item .iprice { font-size: 26px; }
   .item .card { --cw: 60px; } .item .packart { width: 58px; height: 80px; } .item .packart svg { width: 30px; height: 30px; }
   .zlabel { font-size: 15px; } .zlabel .tot { font-size: 30px; }
 }
@@ -557,13 +566,13 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
   #hdr { padding: 3px 8px; } #tRule { font-size: 11px; }
   #stats { grid-template-columns: repeat(3, 1fr); gap: 4px; } #sScore { grid-column: auto; }
   .stat span { font-size: 20px; } .stat b { font-size: 9px; }
-  #charmsRow .slots { grid-template-columns: repeat(var(--n, 5), 1fr); grid-auto-rows: 40px; } .slot svg { width: 24px; height: 24px; }
+  #charmsRow .slots { grid-template-columns: repeat(var(--n, 5), 1fr); grid-auto-rows: 40px; } .slot svg { width: 24px; height: 24px; } .slot svg.coin { width: 34px; height: 34px; }
   #consRow { grid-template-columns: 1fr auto auto; } #consRow .btn, #consRow .cons { min-height: 32px; }
   .cslot { width: 32px; height: 32px; }
   #scorebox { min-height: 60px; } .cm { font-size: 26px; } #sbMsg { font-size: 14px; height: 18px; }
   .btn { min-height: 40px; font-size: 15px; } .arow.small .btn { min-height: 34px; font-size: 13px; }
   .shophead { padding: 2px 10px; } .shophead h2 { font-size: 20px; } .sec { padding: 4px 8px 6px; gap: 4px; }
-  .item { min-height: 0; padding: 3px 2px; } .item svg.ico { width: 26px; height: 26px; } .item .iname { min-height: 0; font-size: 11px; }
+  .item { min-height: 0; padding: 3px 2px; } .item svg.ico { width: 26px; height: 26px; } .item svg.coin { width: 35px; height: 35px; } .item .iname { min-height: 0; font-size: 11px; }
   .item .card { --cw: 30px; } .item .packart { width: 28px; height: 38px; } .item .packart svg { width: 16px; height: 16px; }
   #shopSlots { height: 38px; }
   .shopfoot .btn { min-height: 42px; font-size: 16px; }
@@ -573,8 +582,8 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
 /* Petit téléphone en portrait : boutique plus serrée */
 @media (orientation: portrait) and (max-height: 700px) {
   .serv h3 { display: none; }
-  #shopSlots { height: 40px; } .slot svg { width: 24px; height: 24px; }
-  .item { min-height: 84px; } .item .iname { min-height: 0; } .item svg.ico { width: 28px; height: 28px; }
+  #shopSlots { height: 40px; } .slot svg { width: 24px; height: 24px; } .slot svg.coin { width: 30px; height: 30px; }
+  .item { min-height: 84px; } .item .iname { min-height: 0; } .item svg.ico { width: 28px; height: 28px; } .item svg.coin { width: 38px; height: 38px; }
   .item .packart { width: 32px; height: 44px; } .item .packart svg { width: 18px; height: 18px; }
   .shophead h2 { font-size: 20px; }
 }
@@ -669,6 +678,9 @@ svg.ico, .slot > svg, .cslot > svg, .sh-icon > svg, .colitem svg, .tagicon svg {
 </script>
 <script>
 /*ICONS*/
+</script>
+<script>
+/*COINS*/
 </script>
 <script>
 /*ENGINE*/

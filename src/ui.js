@@ -38,7 +38,85 @@ const CHARM_COL = {
 const PAL = ['#ff3b6b', '#33c4ff', '#ffd23f', '#3ef08a', '#b56cff', '#ff9f1a', '#5ff0ff', '#ff8fc8', '#f6efff', '#8f9bff', '#46f08c', '#ffb36b'];
 function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 const charmColor = id => CHARM_COL[id] || (F.CHARMS[id] && F.CHARMS[id].rarity === 'l' ? '#ffd23f' : PAL[hash(id) % PAL.length]);
-const charmIcon = id => gIcon(GI.map.charm[id], 'ico', charmColor(id));
+// Porte-bonheur = jetons-objets : la pièce EST l'objet (un cookie a l'air d'un cookie).
+// Pas de disque derrière : la silhouette de l'objet fait la pièce, dans la couleur réelle de l'objet,
+// avec un contour d'encre épais (qui remplit aussi les petits détails), une tranche en dessous,
+// un dégradé de volume et un reflet. La rareté se lit sur le cadre de l'emplacement.
+const hex2rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const mixHex = (h, t, a) => { const A = hex2rgb(h), B = hex2rgb(t); return '#' + A.map((v, i) => Math.round(v + (B[i] - v) * a).toString(16).padStart(2, '0')).join(''); };
+const shade = (h, a) => mixHex(h, '#000000', a), tint = (h, a) => mixHex(h, '#ffffff', a);
+const COIN_INK = '#1b1030';
+// couleur réelle de chaque objet (matière : or, bois, peau, os, acier…)
+const GOLD = '#f2c037', STEEL = '#b9c3d3', WOOD = '#b07a45', SKIN = '#e7b48a', BONE = '#efe6d0', IVORY = '#f5f0e6', STONE = '#b8b0a2', CARD = '#f3ead2', RED = '#e8434f', CREAM = '#fff4e0';
+const OBJ_COL = {
+  pilepoil: RED, charlie: CARD, cassecou: '#f08a2c', prudence: '#5b8fd6', maudit: '#d9333f', lynx: '#d9a35b', boule: '#9b7bf0', chasseur: CARD,
+  sang: '#d8233c', encre: '#4b4fb0', cour: GOLD, septieme: '#7fd3ff', calibre: STEEL, elan: '#ff8a3d', tirelire: '#ff9ec3', poignee: SKIN,
+  filet: '#c9a46a', quitte: GOLD, mainpleine: SKIN, ferrailleur: STEEL, dividende: '#7bd88f', capitaliste: '#6b6290', artisan: WOOD, minimaliste: '#c9b6ff',
+  tetebrulee: '#ff6a1a', contre: STEEL, ficelle: '#d4b072', bourrin: '#a8734a', rigolo: '#a45ee6', serenade: '#e9b949', escalier: STONE, pivot: '#d4a640',
+  harmonie: '#e9b949', echelle: WOOD, toupie: RED, demiportion: '#e7b26a', banniere: RED, sommet: '#dfe8f5', egalitaire: '#d4a640', impair: IVORY,
+  pari: RED, grocalibre: '#d9a441', poing: SKIN, glace: '#a8e6ff', popcorn: '#fff3c4', bavard: '#f4f1ff', dynamite: '#e0413a', souplesse: '#bfe6ff',
+  compteurfou: WOOD, avance: GOLD, piquenique: '#c99a5b', collection: '#9fc9e8', poucet: '#c5a07a', sourire: BONE, masque: '#6fd06a', talkie: '#f0c23a',
+  clairlune: '#f5e9a8', fibonacci: '#f3c9a8', abstrait: '#ff5ad9', taureau: '#a8734a', lacets: '#ff6b6b', flibustier: '#6b6290', erosion: '#a89f91', tailleur: STONE,
+  diseuse: SKIN, supernova: '#ffb020', cascadeur: '#ff8a3d', banane: '#ffd84a', bananebleue: '#4fb6ff', pileface: GOLD, pochoir: '#3fd1c0', fidelite: '#d9534f',
+  arnaqueur: '#8a7fb0', tableau: '#3f8a63', acrobate: '#ff7ab8', photo: STEEL, grenat: '#c41f45', fleche: STEEL, agate: '#c58bff', pierrebrute: '#9a8f80',
+  pot: '#d2693c', vision: '#5ec2ff', duo: GOLD, trio: '#a45ee6', famille: '#e8a25a', ordre: STONE, tribu: '#c8743f', roisoleil: '#ffc83d',
+  permis: STEEL, collectionc: CARD, photofinish: '#f4f4f4', revanche: '#c78a4a', royal: GOLD, tirageparfait: CARD, jumeaux: '#7fd3ff', roulette: STEEL,
+  accro: CREAM, coureur: '#ff8a3d', jumelles: '#7d8cab', carre: '#a45ee6', petitbonhomme: '#c9824a', randonneur: '#7bbf5a', vampire: '#ece2f4', constellation: '#ffe27a',
+  hologramme: '#a8f0ff', chat: CREAM, vitrier: '#bdefff', feucamp: '#ff7a1a', obelisque: '#d9c48f', folie: '#ff9ec3', dague: STEEL, cartonrouge: RED,
+  flash: '#9ccf5a', bouillon: '#7d8cab', chateau: STONE, domino: IVORY, retour: '#7fd3ff', dragon: '#4fcf6a', phenix: '#ff6a1a', sphinx: '#e9c46a',
+  chimere: '#ff5ad9', kraken: '#5ff0ff', crepuscule: '#ff8f5a', bis: '#7fd3ff', comedie: '#f4f1ff', premier: '#ffd84a', seltzer: '#5ec2ff', reflet: '#cfe8ff',
+  echo: '#bfa6ff', doigts: SKIN, raccourci: '#ff8a3d', pareidolie: '#ffc83d', barbouille: '#5ec27a', depipe: IVORY, saltimbanque: '#ff7ab8', credit: '#5ec2ff',
+  pilier: '#f2b33d', cambrioleur: '#8a7fb0', doubleur: RED, fendeur: STEEL, souffle: '#ff9ec3', croupierlas: '#8f9bff', assurance: RED, squelette: BONE,
+  luchador: '#4fb6ff', soda: RED, marchenoir: '#8a7fb0', bonimenteur: '#ffb020', astronome: '#c9a46a', pepite: '#ffc83d', oeuf: '#f7f0e0', visite: '#f4f1ff',
+  petard: RED, ruee: '#c9a46a', gratte: '#ff7ab8', feuille: '#e9d3a0', recycleur: '#5ec27a', patience: '#6fbf5a', nuage: '#e8f4ff', fusee: '#dfe8f5',
+  cadeau: RED, lune: '#f5e9a8', satellite: STEEL, ticketdore: '#ffc83d', jackpot: RED, triplemise: '#5ec2ff', matador: '#a8734a', huit: '#5b4f8f',
+  superposition: '#7fd3ff', vagabond: '#c9a46a', seance: '#f5e9c8', cartomancien: '#a45ee6', astrologue: '#ffe27a', astronaute: '#f4f1ff', hallucination: RED,
+  marbrier: STONE, racaille: '#8a7fb0', midas: GOLD, relique: GOLD, idole: '#c8743f', compteur: WOOD,
+};
+// Pièces dessinées à la main (src/coins.js) : pixellisées une fois au démarrage sur une grille 56 × 56
+// (lissage puis seuil d'opacité → bords nets), affichées sans lissage. En attendant, on montre le vectoriel.
+const FC = window.F21C || {}, COIN_PX = 56, coinPix = {};
+const coinSvgUrl = id => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">${FC[id]}</svg>`);
+Object.keys(FC).forEach(id => {
+  const im = new Image();
+  im.onload = () => {
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = COIN_PX;
+      const x = c.getContext('2d'); x.imageSmoothingQuality = 'high'; x.drawImage(im, 0, 0, COIN_PX, COIN_PX);
+      const px = x.getImageData(0, 0, COIN_PX, COIN_PX), p = px.data;
+      for (let i = 3; i < p.length; i += 4) p[i] = p[i] > 110 ? 255 : 0;
+      x.putImageData(px, 0, 0);
+      coinPix[id] = c.toDataURL();
+      document.querySelectorAll(`image[data-coin="${id}"]`).forEach(e => e.setAttribute('href', coinPix[id]));
+    } catch (e) { /* canvas indisponible : on garde le vectoriel */ }
+  };
+  im.src = coinSvgUrl(id);
+});
+const LEGEND_SPARK = '<path d="M86 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff8d0"/><path d="M12 72l1.4 3.4 3.4 1.4-3.4 1.4-1.4 3.4-1.4-3.4-3.4-1.4 3.4-1.4z" fill="#fff8d0" opacity=".85"/>';
+let coinSeq = 0;
+function charmIcon(id) {
+  if (FC[id]) {
+    const legend = F.CHARMS[id] && F.CHARMS[id].rarity === 'l';
+    return `<svg class="ico coin pix${legend ? ' legend' : ''}" viewBox="0 0 100 100" aria-hidden="true"><image data-coin="${id}" href="${coinPix[id] || coinSvgUrl(id)}" width="100" height="100"/>${legend ? LEGEND_SPARK : ''}</svg>`;
+  }
+  const d = F.CHARMS[id], col = OBJ_COL[id] || charmColor(id), n = ++coinSeq;
+  const pd = GI.paths[GI.map.charm[id]] || '';
+  const legend = d && d.rarity === 'l';
+  const W = legend ? 84 : 86, X = (100 - W) / 2, Y = legend ? 7 : 3, k = (W / 512).toFixed(4);
+  const P = `p${n}`, G = `g${n}`, C = `c${n}`;
+  const use = (dx, dy, fill, extra) => `<use href="#${P}" x="${dx}" y="${dy}" fill="${fill}"${extra || ''}/>`;
+  const ring = (dy, r) => [[-r, 0], [r, 0], [0, -r], [0, r], [r * .7, r * .7], [-r * .7, r * .7], [r * .7, -r * .7], [-r * .7, -r * .7]].map(([a, b]) => use(a, dy + b, COIN_INK)).join('');
+  let svg = `<defs><path id="${P}" transform="translate(${X} ${Y}) scale(${k})" d="${pd}"/>`
+    + `<linearGradient id="${G}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${tint(col, .22)}"/><stop offset=".6" stop-color="${col}"/><stop offset="1" stop-color="${shade(col, .22)}"/></linearGradient>`
+    + `<clipPath id="${C}"><use href="#${P}"/></clipPath></defs>`;
+  if (legend) svg += `<circle cx="50" cy="54" r="40" fill="${col}" opacity=".22"/><circle cx="50" cy="54" r="30" fill="${col}" opacity=".18"/>`;
+  // tranche (épaisseur) puis contour d'encre, puis la face
+  svg += ring(4.5, 2.4) + use(0, 4.5, shade(col, .5)) + ring(0, 2.4) + use(0, 0, `url(#${G})`);
+  // reflet en haut à gauche et ombre de volume en bas, coupés à la forme de l'objet
+  svg += `<g clip-path="url(#${C})"><ellipse cx="34" cy="22" rx="30" ry="16" fill="#fff" opacity=".28" transform="rotate(-24 34 22)"/><rect x="0" y="74" width="100" height="30" fill="${shade(col, .5)}" opacity=".25"/></g>`;
+  if (legend) svg += `<path d="M86 10l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff8d0"/><path d="M12 72l1.4 3.4 3.4 1.4-3.4 1.4-1.4 3.4-1.4-3.4-3.4-1.4 3.4-1.4z" fill="#fff8d0" opacity=".85"/>`;
+  return `<svg class="ico coin${legend ? ' legend' : ''}" viewBox="0 0 100 100" aria-hidden="true">${svg}</svg>`;
+}
 const SEAL_COL = { marqueor: '#ffd23f', marquerouge: '#ff2d4a', marquebleue: '#33c4ff', marqueviolette: '#b56cff' };
 function consIcon(c) {
   if (c.kind === 'etoile') return gIcon(GI.map.misc.etoile, 'ico');

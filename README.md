@@ -6,7 +6,7 @@ Roguelite de blackjack en deckbuilding, pensé pour le téléphone (format portr
 
 **En ligne : [mrpouchi.github.io/fievre21](https://mrpouchi.github.io/fievre21/)**
 
-Ou en local : ouvre `index.html` dans un navigateur. Le fichier est autonome : aucune dépendance, aucun serveur.
+Ou en local : ouvre `index.html` dans un navigateur. Le fichier est autonome : aucune dépendance, aucun serveur. La musique se trouve dans `music/` et doit rester à côté du fichier HTML.
 
 ## Structure
 
@@ -17,6 +17,7 @@ Ou en local : ouvre `index.html` dans un navigateur. Le fichier est autonome : a
 - `src/icon_map.js` : quelle icône pour chaque porte-bonheur, consommable, badge, talisman et paquet
 - `src/icons.js` : icônes vectorielles générées par `src/gen_icons.js` (ne pas modifier à la main)
 - `src/coins.js` : pièces des porte-bonheur dessinées à la main (SVG 100 × 100), pixellisées en jeu sur une grille de 56 px
+- `music/` : musique d'ambiance (menu, boutique, Arcanes, Étoiles, boss), MP3 96 kbps
 - `src/build.py` : assemble le tout dans `index.html` et `fievre21.html`
 - `src/sim.js` : simulateur d'équilibrage (`node src/sim.js 2000`)
 - `AMELIORATIONS.md` : liste des 395 ajouts de la version 2
